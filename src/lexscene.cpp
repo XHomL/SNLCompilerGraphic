@@ -109,6 +109,8 @@ LexScene::LexScene() {
 			tt->setPos(pos.at(i) * 2);
 		}
     }
+
+	//通过line中的vector，获取序号，并通过序号获取items中对应项的坐标
     for(auto item:line){
         auto x=items.at(item.x());
         auto y=items.at(item.y());

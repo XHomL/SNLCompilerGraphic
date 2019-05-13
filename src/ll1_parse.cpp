@@ -32,7 +32,7 @@ QSet<LexType> TTSet={
 };
 
 QSet<LexType> NTSet={
-    //feizhongjiefu
+    //非终结符
     Program,	      ProgramHead,	    ProgramName,	DeclarePart,
     TypeDec,        TypeDeclaration,	TypeDecList,	TypeDecMore,
     TypeId,	      TypeName,			BaseType,	    StructureType,

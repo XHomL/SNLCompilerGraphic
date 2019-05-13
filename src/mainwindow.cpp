@@ -132,11 +132,18 @@ void MainWindow::init_ui() {
 
     menu_lex->addAction(speed_action);
 
-	//设置当用户点击开始菜单的"Lex->Lex"时开始运行进行词法分析
+	//设置当用户点击开始菜单的"Lex->Lex"时开始运行进行词法分析线程
     auto action_lex = menu_lex->addAction("Lex");
     connect(action_lex, &QAction::triggered, [this]() {
         listwidget_token->clear();
         lex = Lex::getInstance(editer_left->document());
+
+		/*函数原型：
+		bool QObject::connect(const QObject* sender,const char * signal,const QObject * receiver,const char * member)[static]
+		功能：
+		将信号发送者sender对象中的信号signal与接受者receiver中的member槽函数联系起来。当指定信号signal时必须使用宏SIGNAL（），当指定槽函数时必须使用宏SLOT()，
+		如果发送者与连接者属于同一个对象时，那么在connect调用中接受者参数可以忽略。
+		*/
         connect(lex, &Lex::charget, this, &MainWindow::char_changed, Qt::ConnectionType::UniqueConnection);
         connect(lex, &Lex::idbuff_changed, this, &MainWindow::idbuff_changed, Qt::ConnectionType::UniqueConnection);
         connect(lex, &Lex::token_get, this, &MainWindow::token_get, Qt::ConnectionType::UniqueConnection);
@@ -157,10 +164,12 @@ void MainWindow::init_ui() {
     ins = new QTextStream();
 }
 
+//更新current_char面板的当前字符
 void MainWindow::char_changed(char c) {
     label_current_char->setText("\'" + QString(c) + "\'");
 }
 
+//更新current_line面板的当前单词
 void MainWindow::idbuff_changed(QString str) {
     label_current_line->setText("\"" + str + "\"");
 }

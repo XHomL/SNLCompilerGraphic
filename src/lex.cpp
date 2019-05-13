@@ -104,7 +104,8 @@ Token *Lex::lookup(QString str) {
   Token *tmp;
   if (reservedWords.find(str) != reservedWords.end()) {
     tmp = new Token(line_number, reservedWords[str], str);
-  } else {
+  } 
+  else {
     tmp = new Token(line_number, ID, str);
   }
   return tmp;
@@ -140,6 +141,7 @@ void Lex::run()
         ins >> lookhead;
         emit charget(lookhead);
         thread()->msleep(sleep_time);
+
 		//读取一个单词
         while (ischar(lookhead) || isnum(lookhead)) {
             emit go_path({{1,4},{4,3},{3,2},{2,1}});
@@ -235,6 +237,7 @@ void Lex::run()
             ins.seek(ins.pos() - 1);
             emit go_path({{16,17},{17,19},{19,41}});
           } 
+
 		  //若为':='则进行线程间通信
 		  else {
               emit go_path({{16,18},{18,20},{20,41}});
@@ -276,6 +279,7 @@ void Lex::run()
           Token *tmp;
           if (next == '.') {
               emit go_path({{25,29},{29,41}});
+			  //将lex设置为UNDERRANGE,将sem设为lexName[UNDERRANGE](即为"..")
             tmp = new Token(line_number, UNDERRANGE, lexName[UNDERRANGE]);
           } 
 		  else {
