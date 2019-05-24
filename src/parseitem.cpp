@@ -13,6 +13,7 @@ ParseItem::ParseItem():QGraphicsTextItem()
 ParseItem::ParseItem(const QString &text, QGraphicsItem *parent):QGraphicsTextItem (text,parent)
 {
     myparent=parent;
+	//itemµÄ²ãÊý
     cengshu=0;
 
 }

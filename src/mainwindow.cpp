@@ -155,10 +155,12 @@ void MainWindow::init_ui() {
     /**
      * SyntaxMenu
      */
-
+	//使得当用户点击菜单栏上re按钮时，程序使用递归下降法生成语法树
     auto action_parse = this->menuBar()->addMenu(tr("Parse"));
     auto re = action_parse->addAction(tr("re"));
     connect(re, &QAction::triggered, this, &MainWindow::re_parse);
+
+
     auto LL1 = action_parse->addAction(tr("LL1"));
     connect(LL1, &QAction::triggered, this, &MainWindow::ll1_parse);
     ins = new QTextStream();
@@ -174,18 +176,18 @@ void MainWindow::idbuff_changed(QString str) {
     label_current_line->setText("\"" + str + "\"");
 }
 
+//用于增加token显示面板中的token
 void MainWindow::token_get(Token *token) {
-    QString str("Line:%1\tLex:%2\t\tSem:%3");
+    QString str("Line:%1\tLex:%2\tSem:%3");
     QString item = str.arg(token->getLine()).arg(token->getLexName()).arg(token->getSem());
     listwidget_token->addItem(item);
-
 }
 
 void MainWindow::re_parse() {
+	//使语法分析程序获得词法分析后的list of token句柄
     auto re = Parse::getInstance(lex->getTokenList());
     connect(re, &Parse::parse_success, parseScene, &ParseScene::show_parsetree, Qt::ConnectionType::UniqueConnection);
     re->start();
-
 }
 
 void MainWindow::ll1_parse() {

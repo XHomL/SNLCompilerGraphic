@@ -113,6 +113,8 @@ extern QMap<VarKind,QString> varkind_map;
 typedef enum {Void,Integer,Boolean} ExpType;
 extern QMap<ExpType,QString> exptype_map;
 
+//attr成员procAttr:记录过程的属性
+//procAttr成员paramt:记录过程的参数类型，值为枚举类型valparamtype(值参)或者varparamtype(变参)
 typedef enum {valparamType,varparamType} ParamType; 
 extern QMap<ParamType,QString> paramtype_map;
 
@@ -161,13 +163,14 @@ typedef struct treeNode
                 int low;
 				//Arrayttr成员up:整数类型变量，记录数组的上界
                 int up;
+				//记录数组的成员类型
                 DecKind   childtype;
             }ArrayAttr;
 	         
 		//attr成员procAttr:记录过程的属性
 		struct
 			{	
-				//procAttr成员paramt:记录过程的参数类型，值为枚举类型valparamtype或者varparamtype，表示过程的参数是值惨还是变参
+				//procAttr成员paramt:记录过程的参数类型，值为枚举类型valparamtype或者varparamtype，表示过程的参数是值参还是变参
                 ParamType  paramt;
             }ProcAttr;
 		

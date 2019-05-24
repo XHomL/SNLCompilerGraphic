@@ -62,7 +62,7 @@ bool Parse::match(LexType expected) {
         return true;
         }
     } else {
-        syntaxError("ERROR not match,except:"+lexName[expected]+" get:"+lexName[head->getLex()]+" in line "+head->getLine());
+        syntaxError("ERROR not match,except:"+lexName[expected]+" get:"+lexName[head->getLex()]+" in line:"+ QString::number(lineno));
         return false;
     }
 
@@ -180,7 +180,7 @@ TreeNode *Parse::typeDec() {
 
 		//若单词不是TYPE\VAR\PROCEDURE\BEGIN则显示提示信息并跳过此单词，读取下一个单词
         default :
-            syntaxError("unexpected token:" + head->getSem()+" in line :"+QString::number(lineno));
+            syntaxError("unexpected token:" + head->getSem()+" in typeDec()! in line :"+QString::number(lineno));
             head = head->next;
             break;
     }
@@ -258,8 +258,8 @@ TreeNode *Parse::typeDecMore() {
 
 	default:
 		//若读入单词均不为上述类型，则读入下一个单词
+		syntaxError("unexpected token when declare more Type");
 		head = head->next;
-		//syntaxError("unexpected token when declare more Type");
 		break;
 	}
 	return p;
@@ -317,8 +317,8 @@ void Parse::typeName(TreeNode *pNode) {
 
 			//若单词不为以上类型，则直接读取下一个单词
 		default:
-			head = head->next;
 			syntaxError("unexpected Type");
+			head = head->next;
 			break;
 		}
 	}
@@ -347,8 +347,8 @@ void Parse::baseType(TreeNode *pNode) {
 
 		//若单词不为以上类型，则直接读取下一个单词
 	default:
-		head = head->next;
 		syntaxError("unexpected BaseType");
+		head = head->next;
 		break;
 	}
 
@@ -371,8 +371,8 @@ void Parse::structureType(TreeNode *pNode) {
             recType(pNode);
             break;
         default:
-            head = head->next;
             syntaxError("unexpected StructureType");
+			head = head->next;
             break;
     }
 
@@ -438,7 +438,7 @@ TreeNode *Parse::fieldDecList() {
     TreeNode *p = nullptr;
     t->lineno = line0;
     switch (head->getLex()) {
-		//若当前单词为INTEGER\CHAR
+		//若当前单词为INTEGER\CHAR类型
         case INTEGER_T:
         case CHAR_T:
             baseType(t);
@@ -447,7 +447,7 @@ TreeNode *Parse::fieldDecList() {
             p = fieldDecMore();
             break;
 
-		//若当前单词为ARRAY
+		//若当前单词为ARRAY类型
         case ARRAY:
             arrayType(t);
             idList(t);
@@ -457,8 +457,8 @@ TreeNode *Parse::fieldDecList() {
 
 		//若单词不为以上类型，则直接读取下一个单词
         default :
-            head = head->next;
             syntaxError("unexpected Type . Only accept INTEGER CHAR ARRAY");
+			head = head->next;
             break;
     }
     t->sibling = p;
@@ -483,8 +483,8 @@ TreeNode *Parse::fieldDecMore() {
 		p = fieldDecList();
 		break;
 	default:
+		syntaxError("unexpected token " + lexName[head->getLex()] + " in fieldDecMore()! in line: " + head->getLine()  );
 		head = head->next;
-		syntaxError("unexpected token " + lexName[head->getLex()]);
 		break;
 	}
 	return p;
@@ -526,8 +526,8 @@ void Parse::idMore(TreeNode *pNode) {
             idList(pNode);
             break;
         default :
-            head = head->next;
             syntaxError("unexpected token in idMore");
+			head = head->next;
             break;
     }
 }
@@ -549,8 +549,8 @@ TreeNode *Parse::varDec() {
             t = varDeclaration();
             break;
         default:
-            //head = head->next;
-            syntaxError("unexpected token is here! "+lexName[head->getLex()]+head->getLine());
+            syntaxError("unexpected token:" + head->getLexName() +" in varDec()! in line "+ head->getLine());
+			head = head->next;
             break;
     }
     return t;
@@ -613,7 +613,7 @@ TreeNode *Parse::varDecMore() {
             t = varDecList();
             break;
         default:
-            syntaxError("unexpected token"+head->getLexName()+" is here in line:"+QString::number(lineno));
+            syntaxError("unexpected token"+head->getLexName()+" in varDecMore()! in line:"+QString::number(lineno));
             break;
     }
     return t;
@@ -630,8 +630,8 @@ void Parse::varIdList(TreeNode *t) {
         match(ID);
         t->idnum = (t->idnum) + 1;
     } else {
-		head = head->next;
         syntaxError("a varid is expected here! in line:"+QString::number(lineno));
+		head = head->next;
     }
     varIdMore(t);
 }
@@ -651,8 +651,8 @@ void Parse::varIdMore(TreeNode *t) {
             varIdList(t);
             break;
         default:
+            syntaxError("unexpected token "+head->getLexName()+ "in varIdMore()! in line:"+QString::number(lineno));
 			head = head->next;
-            syntaxError("unexpected token "+head->getLexName()+ "is here! in line:"+QString::number(lineno));
             break;
     }
 }
@@ -672,8 +672,8 @@ TreeNode *Parse::procDec() {
 		t = procDeclaration();
 		break;
 	default:
-		//head = head->next;
-		syntaxError("unexpected token " + head->getLexName() + " is here! in line:" + QString::number(lineno));
+		syntaxError("unexpected token " + head->getLexName() + " in procDec()! in line:" + QString::number(lineno));
+		head = head->next;
 		break;
 	}
 	return t;
@@ -695,6 +695,7 @@ TreeNode *Parse::procDeclaration() {
 	match(PROCEDURE);
 	if (t != nullptr) {
 		t->lineno = line0;
+		//t的成员attr.name[]赋值为当前单词的sem部分，记录函数名，t的成员attr.idnum加1，匹配单词ID
 		if (head->getLex() == ID) {
 			strcpy(t->name[0], head->getSem().toStdString().c_str());
 			(t->idnum)++;
@@ -703,9 +704,11 @@ TreeNode *Parse::procDeclaration() {
 		match(LPAREN);
 		paramList(t);
 		match(RPAREN);
-		match(COLON);
+		//此处课本有误，应当match(SEMI)而非match(COLON)
+		match(SEMI);
 		t->child[1] = procDecPart();
 		t->child[2] = procBody();
+		//下面的语句为存在多个过程时使用
 		//t->sibling = procDec();
 	}
 	return t;
@@ -734,8 +737,8 @@ void Parse::paramList(TreeNode *t) {
 		t->child[0] = p;
 		break;
 	default:
+		syntaxError("unexpected token " + head->getLexName() + " in paramList()! in line:" + QString::number(lineno));
 		head = head->next;
-		syntaxError("unexpected token " + head->getLexName() + " is here! in line:" + QString::number(lineno));
 		break;
 	}
 }
@@ -766,6 +769,7 @@ TreeNode *Parse::paramMore() {
 	switch (head->getLex()) {
 	case RPAREN:
 		break;
+	//若过程声明中的参数声明中的参数后面为分号，说明存在多个参数
 	case SEMI:
 		match(SEMI);
 		t = paramDecList();
@@ -773,8 +777,8 @@ TreeNode *Parse::paramMore() {
 			syntaxError("a param declaration is request!");
 		break;
 	default:
+		syntaxError("unexpected token " + head->getLexName() + " in paramMore()! in line:" + QString::number(lineno));
 		head = head->next;
-		syntaxError("unexpected token " + head->getLexName() + " is here! in line:" + QString::number(lineno));
 		break;
 	}
 	return t;
@@ -791,6 +795,7 @@ TreeNode *Parse::mparam() {
 	if (t != nullptr) {
 		t->lineno = line0;
 		switch (head->getLex()) {
+		//当过程声明中的参数声明中参数部分为以下类型时，说明参数是值参
 		case INTEGER_T:
 		case CHAR_T:
 		case ARRAY:
@@ -800,6 +805,8 @@ TreeNode *Parse::mparam() {
 			typeName(t);
 			formList(t);
 			break;
+
+		//当过程声明中的参数声明中参数部分为以下类型时，说明参数是变参
 		case VAR:
 			match(VAR);
 			t->attr.ProcAttr.paramt = varparamType;
@@ -807,9 +814,8 @@ TreeNode *Parse::mparam() {
 			formList(t);
 			break;
 		default:
+			syntaxError("unexpected token " + head->getLexName() + " in mparam()! in line:" + QString::number(lineno));
 			head = head->next;
-
-			syntaxError("unexpected token " + head->getLexName() + " is here! in line:" + QString::number(lineno));
 			break;
 		}
 	}
@@ -849,8 +855,8 @@ void Parse::fidMore(TreeNode *t) {
 		formList(t);
 		break;
 	default:
+		syntaxError("unexpected token " + head->getLexName() + " in fidMore()! in line:" + QString::number(lineno));
 		head = head->next;
-		syntaxError("unexpected token " + head->getLexName() + " is here! in line:" + QString::number(lineno));
 		break;
 	}
 }
@@ -931,8 +937,8 @@ TreeNode *Parse::stmMore() {
             t = stmList();
             break;
         default:
+            syntaxError("unexpected token "+head->getLexName()+" in stmMore()! in line:"+QString::number(lineno));
 			head = head->next;
-            syntaxError("unexpected token "+head->getLexName()+"is here! in line:"+QString::number(lineno));
             break;
     }
     return t;
@@ -971,14 +977,14 @@ TreeNode *Parse::stm() {
             break;
         case ID:
             temp_name = head->getSem();
-            match(ID); //此处和课本有出入
+            match(ID); //此处和课本有出入，应当match(ID)以获取下一个单词类型
             t = assCall();
             break;
 
 		//当前单词为其他单词，非期望单词语法错误，跳过当前单词，读入下一单词
         default:
+            syntaxError("unexpected token:"+head->getLexName()+" in stm()! in  line:"+QString::number(lineno));
 			head = head->next;
-            syntaxError("unexpected token "+head->getLexName()+"is here! in  line:"+QString::number(lineno));
             break;
     }
     return t;
@@ -986,7 +992,7 @@ TreeNode *Parse::stm() {
 
 /********************************************************************/
 /* 产生式 < assCall > ::=   assignmentRest   {:=,LMIDPAREN,DOT}     */
-/*                        | callStmRest      {(}                    */
+/*                        | callStmRest      {LPAREN}               */
 /********************************************************************/
 //赋值语句和过程调用语句部分的处理分析程序
 //由于赋值语句和过程调用语句的开始部分都是标识符，所以该函数根据读入的单词选择调用相应的处理程序(赋值语句处理和过程调用语句处理程序)。
@@ -1003,8 +1009,8 @@ TreeNode *Parse::assCall() {
             t = callStmRest();
             break;
         default:
+			syntaxError("unexpected token:" + head->getLexName() + " sem:" + head->getSem() + " in assCall()! in line:" + QString::number(lineno));
             head = head->next;
-            syntaxError("unexpected token "+head->getLexName()+"is here! in line:"+QString::number(lineno));
             break;
     }
     return t;
@@ -1013,6 +1019,8 @@ TreeNode *Parse::assCall() {
 /********************************************************************/
 /* 产生式 < assignmentRest > ::=  variMore : = exp                  */
 /********************************************************************/
+//该函数根据文法产生式，创建新的赋值语句类型语法树节点。匹配保留字ASSIGN。创建新的表达式类型语法树节点。调用递归处理函数variMore及表达式函数mexp().
+//如果处理成功，函数返回生成的赋值语句类型语法树节点t，否则返回NULL.
 TreeNode *Parse::assignmentRest() {
     TreeNode *t = newStmtNode(AssignK);
 
@@ -1026,15 +1034,13 @@ TreeNode *Parse::assignmentRest() {
         if (child1 != nullptr) {
             child1->lineno = line0;
             strcpy(child1->name[0], temp_name.toStdString().c_str());
-            (child1->idnum)++;
-            variMore(child1);
+			child1->idnum = child1->idnum + 1;
+            variMore(child1);//此句是否多余？
             t->child[0] = child1;
         }
 
 
-        match(ASSIGN);
-
-
+		match(ASSIGN);
         t->child[1] = mexp();
 
     }
@@ -1172,8 +1178,8 @@ TreeNode *Parse::actParamList() {
 			t->sibling = actParamMore();
 		break;
 	default:
+		syntaxError("unexpected token " + head->getLexName() + " in actParamList()! in line:" + QString::number(lineno));
 		head = head->next;
-		syntaxError("unexpected token " + head->getLexName() + " is here! in line:" + QString::number(lineno));
 		break;
 	}
 	return t;
@@ -1195,8 +1201,8 @@ TreeNode *Parse::actParamMore() {
 		t = actParamList();
 		break;
 	default:
+		syntaxError("unexpected token " + head->getLexName() + " in actParamMore()! in line:" + QString::number(lineno));
 		head = head->next;
-		syntaxError("unexpected token " + head->getLexName() + " is here! in line:" + QString::number(lineno));
 		break;
 	}
 	return t;
@@ -1211,6 +1217,7 @@ TreeNode *Parse::actParamMore() {
 //如果处理成功，函数返回所生成的表达式类型语法树节点；否则返回NULL。
 TreeNode *Parse::mexp() {
 
+	//获取左运算因子
 	TreeNode *t = simple_exp();
 
 
@@ -1249,6 +1256,7 @@ TreeNode *Parse::mexp() {
 //如果处理成功，函数返回生成的表达式类型语法树节点；否则返回NULL.
 TreeNode *Parse::simple_exp() {
 
+	//获取运算符的左运算因子
 	TreeNode *t = term();
 
 
@@ -1261,14 +1269,10 @@ TreeNode *Parse::simple_exp() {
 			p->lineno = line0;
 			p->child[0] = t;
 			p->attr.ExpAttr.op = head->getLex();
-
-
 			t = p;
-
-
 			match(head->getLex());
 
-
+			//获取运算符的右运算因子
 			t->child[1] = term();
 		}
 	}
@@ -1285,8 +1289,8 @@ TreeNode *Parse::simple_exp() {
 //如果处理成功，函数返回生成的表达式类型语法树节点；否则返回NULL.
 TreeNode *Parse::term() {
 
+	//获取运算符的左运算因子
 	TreeNode *t = factor();
-
 
 	while ((head->getLex() == TIMES) || (head->getLex() == DIVIDE)) {
 
@@ -1303,7 +1307,7 @@ TreeNode *Parse::term() {
 
 		match(head->getLex());
 
-
+		//获取运算符的右运算因子
 		p->child[1] = factor();
 
 	}
@@ -1363,8 +1367,8 @@ TreeNode *Parse::factor() {
 
 
 	default:
+		syntaxError("unexpected token " + head->getLexName() + " in factor()! in line:" + QString::number(lineno));
 		head = head->next;
-		syntaxError("unexpected token " + head->getLexName() + " is here! in line:" + QString::number(lineno));
 		break;
 	}
 
@@ -1430,8 +1434,7 @@ TreeNode *Parse::variable() {
 //如果当前单词为DOT，则匹配DOT处理域变量函数fieldvar()；
 //否则，读入下一个TOKEN
 void Parse::variMore(TreeNode *t) {
-    switch (head->getLex()
-            ) {
+    switch (head->getLex()) {
         case ASSIGN:
         case TIMES:
         case EQ:
@@ -1472,11 +1475,12 @@ void Parse::variMore(TreeNode *t) {
             t->child[0]->attr.ExpAttr.varkind = IdV;
             break;
         default:
-            head = head->next;
-            syntaxError("unexpected token "+head->getLexName()+" is here! in line:"+QString::number(lineno));
+            syntaxError("unexpected token "+head->getLexName()+" in variMore()! in line:"+QString::number(lineno));
+			head = head->next;
             break;
     }
 }
+
 /********************************************************************/
 /* 产生式 fieldvar   ::=  id  fieldvarMore                          *
 /********************************************************************/
@@ -1534,8 +1538,8 @@ void Parse::fieldvarMore(TreeNode *t) {
             match(RMIDPAREN);
             break;
         default:
-            head = head->next;
-            syntaxError("unexpected token "+head->getLexName()+" is here! in line:"+QString::number(lineno));
+            syntaxError("unexpected token "+head->getLexName()+" in fieldvarMore()! in line:"+QString::number(lineno));
+			head = head->next;
             break;
     }
 }

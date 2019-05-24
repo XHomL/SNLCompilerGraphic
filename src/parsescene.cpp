@@ -87,9 +87,11 @@ void ParseScene::show_parsetree(QSharedPointer<TreeNode> root, QString text)
     QGraphicsLineItem *line;
     for(auto i=0;i!=3;++i){
         if(root->child[i]!=nullptr){
+			//将root作为root->child的parent
             item=new ParseItem(getName(root->child[i]),parent);
             item->cengshu=0;
             this->addItem(item);
+			//设置节点坐标
             item->setPos(QPoint(-100+i*150+(qrand()%100),100+(qrand()%100)));
 
             line=new QGraphicsLineItem(QLine(item->myparent->scenePos().toPoint(),item->scenePos().toPoint()));
@@ -111,14 +113,14 @@ void ParseScene::show_parsetree(QSharedPointer<TreeNode> root, QString text)
 
         item=new ParseItem(getName(node->sibling),parent);
         this->addItem(item);
-        item->setPos(QPoint(500+(qrand()%500),0));
+        item->setPos(QPoint(500+(qrand()%500),0)/2);
 
                // auto coll=this->collidingItems(item,Qt::IntersectsItemBoundingRect);
                // while(!coll.empty()){
                //     item->moveBy(0,qrand()%100);
                // }
 
-
+		//用于绘制节点间的连线
         line=new QGraphicsLineItem(QLine(QPoint(0,0),item->pos().toPoint()));
         this->addItem(line);
         line->setPos(item->myparent->scenePos());
@@ -131,9 +133,10 @@ void ParseScene::show_parsetree(QSharedPointer<TreeNode> root, QString text)
         for(auto i=0;i!=3;++i){
             if(node->child[i]!=nullptr){
                 item=new ParseItem(getName(node->child[i]),parent);
+				//子节点的层数为parent节点层数+1
                 item->cengshu=parent->cengshu+1;
                 this->addItem(item);
-                item->setPos(QPoint(-300+(qrand()%400)+i*500,180+(qrand()%400)));
+                item->setPos(QPoint(-300+(qrand()%400)+i*500,180+(qrand()%400))/1.5);
 
                // while(!item->collidingItems(Qt::IntersectsItemBoundingRect).isEmpty()){
                //     item->moveBy(0,qrand()%50);
@@ -153,6 +156,7 @@ void ParseScene::show_parsetree(QSharedPointer<TreeNode> root, QString text)
 
 }
 
+//获得一个节点中多个变量的名字
 QString ParseScene::get_names(const TreeNode *node)
 {
     QString name;
@@ -164,6 +168,7 @@ QString ParseScene::get_names(const TreeNode *node)
     return name;
 }
 
+//获得节点名
 QString ParseScene::getName(const TreeNode *node)
 {
     QString name;

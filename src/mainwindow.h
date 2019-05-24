@@ -46,6 +46,7 @@ private:
     QHBoxLayout *layout;
     QLabel *label_current_char;
     QLabel *label_current_line;
+	//用于显示token列表
     QListWidget *listwidget_token;
 
     QString filename;

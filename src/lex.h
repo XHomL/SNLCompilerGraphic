@@ -57,10 +57,13 @@ private:
 
 	//通过sinals实现线程间通信，以完成将文本框中的内容传递到显示框中的内容的目的
 signals:
+	//用于传递更改current_char面板中的字符
     void charget(char c);
+	//用于传递更改current_line面板中的单词
     void idbuff_changed(QString buff);
+	//用于传递增加token面板中的token
     void token_get(Token *token);
-	//用于判断走图中的哪一条路径
+	//用于传递判断走图中的哪一条路径
     void go_path(QVector<QPair<int,int>> v);
 
 
