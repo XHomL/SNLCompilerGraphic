@@ -6,18 +6,18 @@
 
 //该函数调用总程序处理分析函数，创建语法分析树，同时处理文件的提前结束错误
 void Parse::run() {
-    root = program();
-    if (head->getLex() != ENDFILE) {
-        syntaxError("end earily in line:"+QString::number(head->getLine()));
-    }
-        emit parse_success(QSharedPointer<TreeNode>(root), QString::fromLocal8Bit("递归下降"));
+	root = program();
+	if (head->getLex() != ENDFILE) {
+		syntaxError("end earily in line:" + QString::number(head->getLine()));
+	}
+	emit parse_success(QSharedPointer<TreeNode>(root), QString::fromLocal8Bit("递归下降"));
 }
 
 /**
  * program ::= programHead declarePart programBody
  * @return
  */
-Parse::Parse(const Token *root):head(root)
+Parse::Parse(const Token *root) :head(root)
 {
 
 }
@@ -26,45 +26,46 @@ Parse::Parse(const Token *root):head(root)
 匹配程序结束标志“.”(DOT)。如果处理成功，函数返回程序根节点语法树节点root；否则返回NULL。
 */
 TreeNode *Parse::program() {
-    TreeNode *ph = programHead();
-    TreeNode *dp = declarePart();
-    TreeNode *pb = programBody();
+	TreeNode *ph = programHead();
+	TreeNode *dp = declarePart();
+	TreeNode *pb = programBody();
 
-    root = newRootNode();
-    if (nullptr != root) {
-        root->lineno = 0;
-        if (nullptr != ph) root->child[0] = ph;
-        else syntaxError("need a program head");
-        if (nullptr != dp) root->child[1] = dp;
-        if (nullptr != pb) root->child[2] = pb;
-        else syntaxError("need a program body");
-    }
-    match(DOT);
+	root = newRootNode();
+	if (nullptr != root) {
+		root->lineno = 0;
+		if (nullptr != ph) root->child[0] = ph;
+		else syntaxError("need a program head");
+		if (nullptr != dp) root->child[1] = dp;
+		if (nullptr != pb) root->child[2] = pb;
+		else syntaxError("need a program body");
+	}
+	match(DOT);
 
-    return root;
+	return root;
 }
 
 void Parse::syntaxError(QString msg) {
 
-    qDebug()<<msg;
-    //TODO show the msg
+	qDebug() << msg;
+	//TODO show the msg
 }
 
 //终极符匹配函数
 //该函数将当前单词与函数参数给定单词相比较，如果一致，则取下一单词；否则，退出语法分析程序。
 bool Parse::match(LexType expected) {
-    if (nullptr!=head&&head->getLex() == expected) {
-        head = head->next;
-        if(head!=nullptr){
-        line0 = head->getLine();
-        lineno=line0;
+	if (nullptr != head && head->getLex() == expected) {
+		head = head->next;
+		if (head != nullptr) {
+			line0 = head->getLine();
+			lineno = line0;
 
-        return true;
-        }
-    } else {
-        syntaxError("ERROR not match,except:"+lexName[expected]+" get:"+lexName[head->getLex()]+" in line:"+ QString::number(lineno));
-        return false;
-    }
+			return true;
+		}
+	}
+	else {
+		syntaxError("ERROR not match,except:" + lexName[expected] + " get:" + lexName[head->getLex()] + " in line:" + QString::number(lineno));
+		return false;
+	}
 
 }
 
@@ -72,92 +73,92 @@ bool Parse::match(LexType expected) {
  * programHead ::=PROGRAM ProgramName
  * @return
  */
-//程序头部处理分析程序
-//该函数根据读入的单词，匹配保留字PROGRAM，然后记录程序名于程序头节点，匹配ID。
-//如果处理成功，函数返回生成的程序头节点类型语法树节点；否则返回NULL。
+ //程序头部处理分析程序
+ //该函数根据读入的单词，匹配保留字PROGRAM，然后记录程序名于程序头节点，匹配ID。
+ //如果处理成功，函数返回生成的程序头节点类型语法树节点；否则返回NULL。
 TreeNode *Parse::programHead() {
-    TreeNode *t = newPheadNode();
+	TreeNode *t = newPheadNode();
 	//若当前程序不是以program开头，则返回NULL
-    if(!match(PROGRAM))
-        goto e;
+	if (!match(PROGRAM))
+		goto e;
 	//新语法树节点t创建成功，且当前单词为ID，则将当前单词的语义信息赋给新语法树节点t的成员attr.name[0]，作为程序的名字。
-    if ((nullptr != t) && (head->getLex() == ID)) {
-        t->lineno = head->getLine();
-        strcpy(t->name[0], head->getSem().toStdString().c_str());
-	//将当前单词和ID匹配，若失败则返回NULL
-    if(!match(ID))
-        goto e;
-    }
+	if ((nullptr != t) && (head->getLex() == ID)) {
+		t->lineno = head->getLine();
+		strcpy(t->name[0], head->getSem().toStdString().c_str());
+		//将当前单词和ID匹配，若失败则返回NULL
+		if (!match(ID))
+			goto e;
+	}
 	//若当前单词(程序名)为空或为保留字(非ID)则报错
-	else{
-        syntaxError("need a program name in line:"+lineno);
-    }
-    return t;
-    e:
-    delete t;
-    t=nullptr;
-    return t;
+	else {
+		syntaxError("need a program name in line:" + lineno);
+	}
+	return t;
+e:
+	delete t;
+	t = nullptr;
+	return t;
 }
 
 
 /*
  * declarePart ::=typeDec varDec procDec
  */
-//程序声明部分处理分析程序
-//该函数根据文法产生式，创建新的类型声明标志节点、变量声明标志节点。
-//调用类型声明部分处理分析函数TypeDec()(其返回指针tp1为类型声明标志节点的第一个子节点)、变量声明部分处理分析函数VarDec()(其返回指针tp2为变量声明标志节点的第一个子节点)、
-//过程声明部分处理分析函数ProcDec()。
-//使变量声明标志节点为类型声明标志节点的兄弟节点，过程声明节点为变量声明标志节点的兄弟节点。
-//如果处理成功，函数返回指向类型声明标志节点(如果没有类型声明，指向变量声明标志节点；如果没有变量声明，则指向过程声明节点)；否则返回NULL。
+ //程序声明部分处理分析程序
+ //该函数根据文法产生式，创建新的类型声明标志节点、变量声明标志节点。
+ //调用类型声明部分处理分析函数TypeDec()(其返回指针tp1为类型声明标志节点的第一个子节点)、变量声明部分处理分析函数VarDec()(其返回指针tp2为变量声明标志节点的第一个子节点)、
+ //过程声明部分处理分析函数ProcDec()。
+ //使变量声明标志节点为类型声明标志节点的兄弟节点，过程声明节点为变量声明标志节点的兄弟节点。
+ //如果处理成功，函数返回指向类型声明标志节点(如果没有类型声明，指向变量声明标志节点；如果没有变量声明，则指向过程声明节点)；否则返回NULL。
 TreeNode *Parse::declarePart() {
 	//创建新的类型声明标志类型语法树节点
-    TreeNode *tp = newDecANode(TypeK);
-    TreeNode *pp = tp;
+	TreeNode *tp = newDecANode(TypeK);
+	TreeNode *pp = tp;
 	//若新语法树节点typeP创建成功
-    if (nullptr != tp) {
-        tp->lineno = 0;//TODO lineno=lineno??
+	if (nullptr != tp) {
+		tp->lineno = 0;//TODO lineno=lineno??
 		//调用类型声明处理函数，返回值tp1
-        TreeNode *tp1 = typeDec();
+		TreeNode *tp1 = typeDec();
 		//若tp1创建成功，则tp1赋给typeP的成员child[0]，作为类型声明部分
-        if (nullptr != tp1)
-            tp->child[0] = tp1;
+		if (nullptr != tp1)
+			tp->child[0] = tp1;
 		//若tp1创建失败则说明没有类型声明，将tp节点设为NULL
-        else {
-            free(tp);
-            tp = nullptr;
-        }
-    }
+		else {
+			free(tp);
+			tp = nullptr;
+		}
+	}
 
 	//创建新的变量声明标志类型语法树节点
-    TreeNode *varp = newDecANode(VarK);
+	TreeNode *varp = newDecANode(VarK);
 	//若新语法树节点varp创建成功
-    if (nullptr != varp) {
-        varp->lineno = 0;//TODO lineno??
+	if (nullptr != varp) {
+		varp->lineno = 0;//TODO lineno??
 		//调用变量声明处理函数，返回值tp2
-        TreeNode *tp2 = varDec();
+		TreeNode *tp2 = varDec();
 		//若tp2创建成功，则将tp2赋给varp的成员child[0]，作为变量声明部分
-        if (nullptr != tp2)
-            varp->child[0] = tp2;
-        else {
-            free(varp);
-            varp = nullptr;
-        }
-    }
+		if (nullptr != tp2)
+			varp->child[0] = tp2;
+		else {
+			free(varp);
+			varp = nullptr;
+		}
+	}
 
 	//调用过程声明处理函数
-    TreeNode *proc = procDec();
-    if (nullptr == proc) {}
-    if (nullptr == varp) { varp = proc; };
-    if (nullptr == tp) { pp = tp = varp; };
-    if (tp != varp) {
-        tp->sibling = varp;
-        //tp = varp;//??此句的作用，是否可以删除?
-    }
-    if (varp != proc) {
-        varp->sibling = proc;
-        //varp = proc;
-    };
-    return pp;
+	TreeNode *proc = procDec();
+	if (nullptr == proc) {}
+	if (nullptr == varp) { varp = proc; };
+	if (nullptr == tp) { pp = tp = varp; };
+	if (tp != varp) {
+		tp->sibling = varp;
+		//tp = varp;//??此句的作用，是否可以删除?
+	}
+	if (varp != proc) {
+		varp->sibling = proc;
+		//varp = proc;
+	};
+	return pp;
 }
 
 
@@ -165,43 +166,43 @@ TreeNode *Parse::declarePart() {
  * typeDec ::=0|TypeDeclaration
  * @return
  */
-//类型声明处理分析程序
-//该函数根据读入的下个单词，如当前单词为TYPE，调用函数typeDeclaration()并赋值给t，则函数返回t；否则返回NULL。
+ //类型声明处理分析程序
+ //该函数根据读入的下个单词，如当前单词为TYPE，调用函数typeDeclaration()并赋值给t，则函数返回t；否则返回NULL。
 TreeNode *Parse::typeDec() {
-    TreeNode *t = nullptr;
-    switch (head->getLex()) {
-        case TYPE:
-            t = typeDeclaration();
-            break;
-        case VAR:
-        case PROCEDURE:
-        case BEGIN:
-            break;
+	TreeNode *t = nullptr;
+	switch (head->getLex()) {
+	case TYPE:
+		t = typeDeclaration();
+		break;
+	case VAR:
+	case PROCEDURE:
+	case BEGIN:
+		break;
 
 		//若单词不是TYPE\VAR\PROCEDURE\BEGIN则显示提示信息并跳过此单词，读取下一个单词
-        default :
-            syntaxError("unexpected token:" + head->getSem()+" in typeDec()! in line :"+QString::number(lineno));
-            head = head->next;
-            break;
-    }
-    return t;
+	default:
+		syntaxError("unexpected token:" + head->getSem() + " in typeDec()! in line :" + QString::number(lineno));
+		head = head->next;
+		break;
+	}
+	return t;
 }
 
 /**
  * TypeDeclaration ::=TYPE TypeDecList
  * @return
  */
-//类型声明中的其他函数
-//该函数根据文法产生式，匹配保留字TYPE，调用函数typeDecList()并赋值给t。如果t为NULL，则显示提示信息。
-//函数返回t。
+ //类型声明中的其他函数
+ //该函数根据文法产生式，匹配保留字TYPE，调用函数typeDecList()并赋值给t。如果t为NULL，则显示提示信息。
+ //函数返回t。
 TreeNode *Parse::typeDeclaration() {
-    if(!match(TYPE))
-        syntaxError("Warning :need a declaration");
-    auto t = typeDecList();
-    if (nullptr == t) {
-        syntaxError("Warning :need a declaration");
-    }
-    return t;
+	if (!match(TYPE))
+		syntaxError("Warning :need a type declaration");
+	auto t = typeDecList();
+	if (nullptr == t) {
+		syntaxError("Warning :need a declaration");
+	}
+	return t;
 
 }
 
@@ -209,31 +210,31 @@ TreeNode *Parse::typeDeclaration() {
  * TypeDecList ::= TypeId=TypeDef;TypeDecMore
  * @return
  */
-//类型声明中的其他函数
-//该函数根据文法产生式，创建新的声明类型节点t。如果申请成功，调用函数typeId()，匹配保留字EQ，调用函数typeName()，匹配保留字SEMI，调用函数typeDecMore()，返回值赋值给t的成员sibling。
-//函数返回t
+ //类型声明中的其他函数
+ //该函数根据文法产生式，创建新的声明类型节点t。如果申请成功，调用函数typeId()，匹配保留字EQ，调用函数typeName()，匹配保留字SEMI，调用函数typeDecMore()，返回值赋值给t的成员sibling。
+ //函数返回t
 TreeNode *Parse::typeDecList() {
-    auto t = newDecNode();
-    if (nullptr != t) {
-        t->lineno = line0;
-        typeId(t);
-        if(!match(EQ))
-            goto e;
-        typeName(t);
-        if(!match(SEMI))
-            goto e;
-        auto *more = typeDecMore();
-        if (nullptr != more) {
-            t->sibling = more;
-        }
-    }
+	auto t = newDecNode();
+	if (nullptr != t) {
+		t->lineno = line0;
+		typeId(t);
+		if (!match(EQ))
+			goto e;
+		typeName(t);
+		if (!match(SEMI))
+			goto e;
+		auto *more = typeDecMore();
+		if (nullptr != more) {
+			t->sibling = more;
+		}
+	}
 
-    return t;
+	return t;
 
-    e:
-    delete t;
-    t=nullptr;
-    return t;
+e:
+	delete t;
+	t = nullptr;
+	return t;
 }
 
 /**
@@ -251,7 +252,7 @@ TreeNode *Parse::typeDecMore() {
 	case BEGIN:
 		break;
 
-		//若读入单词为ID，则调用函数typeDecList()
+		//若读入单词为ID，则说明type声明下存在多个ID，调用函数typeDecList()
 	case ID:
 		p = typeDecList();
 		break;
@@ -269,20 +270,21 @@ TreeNode *Parse::typeDecMore() {
  * typeId ::=id
  * @param pNode
  */
-//类型声明中类型标识符处理分析程序
-//参数为t，无返回值。该函数根据读入的单词，判断TOKEN.Lex=ID的值，如果为真，则将TOKEN.Sem字符串拷贝到参数t的成员attr.name[tnum]中
-//其中，tnum是用来记录name个数的临时变量。然后再将tnum加1，送回参数t的成员attr.idnum中。匹配单词ID。
+ //类型声明中类型标识符处理分析程序
+ //参数为t，无返回值。该函数根据读入的单词，判断TOKEN.Lex=ID的值，如果为真，则将TOKEN.Sem字符串拷贝到参数t的成员attr.name[tnum]中
+ //其中，tnum是用来记录name个数的临时变量。然后再将tnum加1，送回参数t的成员attr.idnum中。匹配单词ID。
 void Parse::typeId(TreeNode *pNode) {
 
-    int tnum = pNode->idnum;
-    if (head->getLex() == ID) {
-        strcpy(pNode->name[tnum], head->getSem().toStdString().c_str());
-        tnum += 1;
-    }else{
-        syntaxError("Type Define need a ID");
-    }
-    pNode->idnum = tnum;
-    match(ID);
+	int tnum = pNode->idnum;
+	if (head->getLex() == ID) {
+		strcpy(pNode->name[tnum], head->getSem().toStdString().c_str());
+		tnum += 1;
+	}
+	else {
+		syntaxError("Type Define need a ID");
+	}
+	pNode->idnum = tnum;
+	match(ID);
 
 }
 
@@ -290,9 +292,9 @@ void Parse::typeId(TreeNode *pNode) {
  * typeName ::=baseType|structureType|id
  * @param pNode
  */
-//具体类型处理分析程序
- //参数为pNode,无返回值。该函数根据读入的单词，或调用BaseType()，或调用structureType()，或者复制标识符名称、匹配标识符，
- //								      或者跳过错误单词、读入下一个单词。
+ //具体类型处理分析程序
+  //参数为pNode,无返回值。该函数根据读入的单词，或调用BaseType()，或调用structureType()，或者复制标识符名称、匹配标识符，
+  //								      或者跳过错误单词、读入下一个单词。
 void Parse::typeName(TreeNode *pNode) {
 	if (nullptr != pNode) {
 		switch (head->getLex()) {
@@ -329,9 +331,9 @@ void Parse::typeName(TreeNode *pNode) {
  * baseType ::= INTEGER|CHAR
  * @param pNode
  */
-//基本类型处理分析程序
- //参数为pNode,无返回值。
-//该函数根据读入的单词判断执行哪个分支。
+ //基本类型处理分析程序
+  //参数为pNode,无返回值。
+ //该函数根据读入的单词判断执行哪个分支。
 void Parse::baseType(TreeNode *pNode) {
 	switch (head->getLex()) {
 		//匹配单词INTEGER，参数pNode的成员kind.dec赋值为IntegerK
@@ -358,23 +360,23 @@ void Parse::baseType(TreeNode *pNode) {
  * structureType :==arrayType|recType
  * @param pNode
  */
-//结构类型处理分析程序
-//参数为pNode,无返回值。
-//该函数根据读入的单词判断选择调用函数ArrayType,或者调用函数RecType()。
+ //结构类型处理分析程序
+ //参数为pNode,无返回值。
+ //该函数根据读入的单词判断选择调用函数ArrayType,或者调用函数RecType()。
 void Parse::structureType(TreeNode *pNode) {
-    switch (head->getLex()) {
-        case ARRAY:
-            arrayType(pNode);
-            break;
-        case RECORD:
-            pNode->kind.dec = RecordK;
-            recType(pNode);
-            break;
-        default:
-            syntaxError("unexpected StructureType");
-			head = head->next;
-            break;
-    }
+	switch (head->getLex()) {
+	case ARRAY:
+		arrayType(pNode);
+		break;
+	case RECORD:
+		pNode->kind.dec = RecordK;
+		recType(pNode);
+		break;
+	default:
+		syntaxError("unexpected StructureType");
+		head = head->next;
+		break;
+	}
 
 }
 
@@ -382,46 +384,47 @@ void Parse::structureType(TreeNode *pNode) {
  * arrayTyoe ::=ARRAY [low..top] OF BaseType
  * @param pNode
  */
-//数组类型的处理分析程序
-//参数为pNode，无返回值。
-//该函数对读入的单词进行匹配，并记录数组的上界和下界数值，再匹配保留字，最后调用基本类型函数baseType()，记录数组的子类型。
+ //数组类型的处理分析程序
+ //参数为pNode，无返回值。
+ //该函数对读入的单词进行匹配，并记录数组的上界和下界数值，再匹配保留字，最后调用基本类型函数baseType()，记录数组的子类型。
 void Parse::arrayType(TreeNode *pNode) {
-    match(ARRAY);
-    match(LMIDPAREN);
+	match(ARRAY);
+	match(LMIDPAREN);
 	//当前单词为INTC，则将当前的数字字符转换成有意义的数字，并赋值给参数pNode的成员attr.ArrayAttr.low，作为数组下界。
-    if (head->getLex() == INTC_VAL) {
-        pNode->attr.ArrayAttr.low = head->getSem().toInt();
-    }
-    match(INTC_VAL);
-    match(UNDERRANGE);
+	if (head->getLex() == INTC_VAL) {
+		pNode->attr.ArrayAttr.low = head->getSem().toInt();
+	}
+	match(INTC_VAL);
+	match(UNDERRANGE);
 	//当前单词为INTC，则将当前的数字字符转换成有意义的数字，并赋值给参数pNode的成员attr.ArrayAttr.up，作为数组上界。
-    if (head->getLex() == INTC_VAL) {
-        pNode->attr.ArrayAttr.up = head->getSem().toInt();
-    }
-    match(INTC_VAL);
-    match(RMIDPAREN);
-    match(OF);
-    baseType(pNode);
+	if (head->getLex() == INTC_VAL) {
+		pNode->attr.ArrayAttr.up = head->getSem().toInt();
+	}
+	match(INTC_VAL);
+	match(RMIDPAREN);
+	match(OF);
+	baseType(pNode);
 	//将参数pNode的成员kind.dec赋值给pNode的另一个成员attr.ArrayAttr.childtype作为子类型，kind.dec赋值为ArrayK。
-    pNode->attr.ArrayAttr.childtype = pNode->kind.dec;
-    pNode->kind.dec = ArrayK;
+	pNode->attr.ArrayAttr.childtype = pNode->kind.dec;
+	pNode->kind.dec = ArrayK;
 }
 
 /**
  * recType ::= RECORD fieldDecLIst END
  * @param pNode
  */
-//记录类型的处理分析程序
-//参数为pNode，无返回值。
-//该函数对读入的单词进行匹配，调用记录中的域函数fieldDecList(),最后再对读入的单词进行匹配。
+ //记录类型的处理分析程序
+ //参数为pNode，无返回值。
+ //该函数对读入的单词进行匹配，调用记录中的域函数fieldDecList(),最后再对读入的单词进行匹配。
 void Parse::recType(TreeNode *pNode) {
-    match(RECORD);
-    TreeNode *p = nullptr;
-    p = fieldDecList();
-    if (nullptr != p) {
-        pNode->child[0] = p;
-    } else syntaxError("need a record body");
-    match(END);
+	match(RECORD);
+	TreeNode *p = nullptr;
+	p = fieldDecList();
+	if (nullptr != p) {
+		pNode->child[0] = p;
+	}
+	else syntaxError("need a record body");
+	match(END);
 
 
 }
@@ -430,48 +433,48 @@ void Parse::recType(TreeNode *pNode) {
  * fieldDecList ::=baseType idList;FieldDecMore|ArrayType idList;FieldDecMore
  * @return
  */
-//记录类型中的其他域声明处理分析函数
-//该函数根据读入的单词判断记录域中的变量属于哪种类型，根据产生式的select集合判断执行哪个分支程序。
-//其中，相同类型的变量id用“,”分隔开，其名称记录在语法树的同一个节点中；不同类型变量节点互为兄弟节点。
+ //记录类型中的其他域声明处理分析函数
+ //该函数根据读入的单词判断记录域中的变量属于哪种类型，根据产生式的select集合判断执行哪个分支程序。
+ //其中，相同类型的变量id用“,”分隔开，其名称记录在语法树的同一个节点中；不同类型变量节点互为兄弟节点。
 TreeNode *Parse::fieldDecList() {
-    auto *t = newDecNode();
-    TreeNode *p = nullptr;
-    t->lineno = line0;
-    switch (head->getLex()) {
+	auto *t = newDecNode();
+	TreeNode *p = nullptr;
+	t->lineno = line0;
+	switch (head->getLex()) {
 		//若当前单词为INTEGER\CHAR类型
-        case INTEGER_T:
-        case CHAR_T:
-            baseType(t);
-            idList(t);
-            match(SEMI);
-            p = fieldDecMore();
-            break;
+	case INTEGER_T:
+	case CHAR_T:
+		baseType(t);
+		idList(t);
+		match(SEMI);
+		p = fieldDecMore();
+		break;
 
 		//若当前单词为ARRAY类型
-        case ARRAY:
-            arrayType(t);
-            idList(t);
-            match(SEMI);
-            p = fieldDecMore();
-            break;
+	case ARRAY:
+		arrayType(t);
+		idList(t);
+		match(SEMI);
+		p = fieldDecMore();
+		break;
 
 		//若单词不为以上类型，则直接读取下一个单词
-        default :
-            syntaxError("unexpected Type . Only accept INTEGER CHAR ARRAY");
-			head = head->next;
-            break;
-    }
-    t->sibling = p;
-    return t;
+	default:
+		syntaxError("unexpected Type . Only accept INTEGER CHAR ARRAY");
+		head = head->next;
+		break;
+	}
+	t->sibling = p;
+	return t;
 }
 
 /**
  * fieldDeMore ::=0|FieldDecList
  * @return
  */
-//记录类型中的其他域声明处理分析函数
- //该函数根据文法产生式判断读入的单词，若为END，则不做任何处理；若为INTEGER、CHAR或ARRAY，则调用FieldDecList()递归处理函数；
- //否则读入下一个TOKEN，函数返回p。
+ //记录类型中的其他域声明处理分析函数
+  //该函数根据文法产生式判断读入的单词，若为END，则不做任何处理；若为INTEGER、CHAR或ARRAY，则调用FieldDecList()递归处理函数；
+  //否则读入下一个TOKEN，函数返回p。
 TreeNode *Parse::fieldDecMore() {
 	TreeNode *p = nullptr;
 	switch (head->getLex()) {
@@ -483,7 +486,7 @@ TreeNode *Parse::fieldDecMore() {
 		p = fieldDecList();
 		break;
 	default:
-		syntaxError("unexpected token " + lexName[head->getLex()] + " in fieldDecMore()! in line: " + head->getLine()  );
+		syntaxError("unexpected token " + lexName[head->getLex()] + " in fieldDecMore()! in line: " + head->getLine());
 		head = head->next;
 		break;
 	}
@@ -494,19 +497,20 @@ TreeNode *Parse::fieldDecMore() {
  * idList ::= ID IdMore
  * @param pNode
  */
-//记录类型域中标识符名处理分析程序
- //参数为pNode,无返回值。
-//该函数根据文法产生式，匹配标识符ID，记录标识符名称，调用递归处理函数IdMore()。
+ //记录类型域中标识符名处理分析程序
+  //参数为pNode,无返回值。
+ //该函数根据文法产生式，匹配标识符ID，记录标识符名称，调用递归处理函数IdMore()。
 void Parse::idList(TreeNode *pNode) {
-    if (head->getLex() == ID) {
+	if (head->getLex() == ID) {
 		//记录标识符名称于参数pNode的成员name[pNode->idnum]中，并且把pNode->idnum加1.
-        strcpy(pNode->name[pNode->idnum], head->getSem().toStdString().c_str());
-        match(ID);
-        pNode->idnum += 1;
-    }else{
-        syntaxError("IDList need an ID but "+lexName[head->getLex()]+" get");
-    }
-    idMore(pNode);
+		strcpy(pNode->name[pNode->idnum], head->getSem().toStdString().c_str());
+		match(ID);
+		pNode->idnum += 1;
+	}
+	else {
+		syntaxError("IDList need an ID but " + lexName[head->getLex()] + " get");
+	}
+	idMore(pNode);
 
 }
 
@@ -514,22 +518,22 @@ void Parse::idList(TreeNode *pNode) {
  * idMore ::=0|,IdList
  * @param pNode
  */
-//记录类型域中其他标识符名处理分析程序
-//参数为pNode,无返回值。
-//该函数根据文法产生式判断读入的单词，处理调用相应的函数。
+ //记录类型域中其他标识符名处理分析程序
+ //参数为pNode,无返回值。
+ //该函数根据文法产生式判断读入的单词，处理调用相应的函数。
 void Parse::idMore(TreeNode *pNode) {
-    switch (head->getLex()) {
-        case SEMI:
-            break;
-        case COMMA:
-            match(COMMA);
-            idList(pNode);
-            break;
-        default :
-            syntaxError("unexpected token in idMore");
-			head = head->next;
-            break;
-    }
+	switch (head->getLex()) {
+	case SEMI:
+		break;
+	case COMMA:
+		match(COMMA);
+		idList(pNode);
+		break;
+	default:
+		syntaxError("unexpected token in idMore");
+		head = head->next;
+		break;
+	}
 }
 
 
@@ -540,20 +544,20 @@ void Parse::idMore(TreeNode *pNode) {
 //该函数根据文法产生式判断读入的单词，处理调用相应的函数。
 //如果处理成功，则返回t,否则返回NULL.
 TreeNode *Parse::varDec() {
-    TreeNode *t = nullptr;
-    switch (head->getLex()) {
-        case PROCEDURE:
-        case BEGIN:
-            break;
-        case VAR:
-            t = varDeclaration();
-            break;
-        default:
-            syntaxError("unexpected token:" + head->getLexName() +" in varDec()! in line "+ head->getLine());
-			head = head->next;
-            break;
-    }
-    return t;
+	TreeNode *t = nullptr;
+	switch (head->getLex()) {
+	case PROCEDURE:
+	case BEGIN:
+		break;
+	case VAR:
+		t = varDeclaration();
+		break;
+	default:
+		syntaxError("unexpected token:" + head->getLexName() + " in varDec()! in line " + head->getLine());
+		head = head->next;
+		break;
+	}
+	return t;
 }
 
 
@@ -564,11 +568,11 @@ TreeNode *Parse::varDec() {
 //该函数根据文法产生式，匹配保留字VAR，调用函数varDecList()。
 //如果处理成功，则返回t;否则返回NULL.
 TreeNode *Parse::varDeclaration() {
-    match(VAR);
-    TreeNode *t = varDecList();
-    if (t == nullptr)
-        syntaxError("a var declaration is expected!");
-    return t;
+	match(VAR);
+	TreeNode *t = varDecList();
+	if (t == nullptr)
+		syntaxError("a var declaration is expected!");
+	return t;
 }
 
 
@@ -579,18 +583,18 @@ TreeNode *Parse::varDeclaration() {
 //该函数根据文法产生式调用相应的变量声明部分的处理函数typeName(),varIdList(),varDecMore()。
 //如果处理成功，则返回t；否则返回NULL.
 TreeNode *Parse::varDecList() {
-    TreeNode *t = newDecNode();
-    TreeNode *p = nullptr;
+	TreeNode *t = newDecNode();
+	TreeNode *p = nullptr;
 
-    if (t != nullptr) {
-        t->lineno = line0;
-        typeName(t);
-        varIdList(t);
-        match(SEMI);
-        p = varDecMore();
-        t->sibling = p;
-    }
-    return t;
+	if (t != nullptr) {
+		t->lineno = line0;
+		typeName(t);
+		varIdList(t);
+		match(SEMI);
+		p = varDecMore();
+		t->sibling = p;
+	}
+	return t;
 }
 
 /********************************************************************/
@@ -599,24 +603,24 @@ TreeNode *Parse::varDecList() {
 //变量声明部分处理程序
 //该函数根据文法产生式，由读入的单词判断执行哪个分支，最后返回t。
 TreeNode *Parse::varDecMore() {
-    TreeNode *t = nullptr;
+	TreeNode *t = nullptr;
 
-    switch (head->getLex()) {
-        case PROCEDURE:
-        case BEGIN:
-            break;
-        case INTEGER_T:
-        case CHAR_T:
-        case ARRAY:
-        case RECORD:
-        case ID:
-            t = varDecList();
-            break;
-        default:
-            syntaxError("unexpected token"+head->getLexName()+" in varDecMore()! in line:"+QString::number(lineno));
-            break;
-    }
-    return t;
+	switch (head->getLex()) {
+	case PROCEDURE:
+	case BEGIN:
+		break;
+	case INTEGER_T:
+	case CHAR_T:
+	case ARRAY:
+	case RECORD:
+	case ID:
+		t = varDecList();
+		break;
+	default:
+		syntaxError("unexpected token" + head->getLexName() + " in varDecMore()! in line:" + QString::number(lineno));
+		break;
+	}
+	return t;
 }
 
 /**
@@ -625,15 +629,16 @@ TreeNode *Parse::varDecMore() {
 //变量声明部分变量名部分处理程序
 //参数为t，无返回值。该函数根据文法产生式，匹配标识符名ID，记录标识符名称，调用函数varIdMore().
 void Parse::varIdList(TreeNode *t) {
-    if (head->getLex() == ID) {
-        strcpy(t->name[(t->idnum)], head->getSem().toStdString().c_str());
-        match(ID);
-        t->idnum = (t->idnum) + 1;
-    } else {
-        syntaxError("a varid is expected here! in line:"+QString::number(lineno));
+	if (head->getLex() == ID) {
+		strcpy(t->name[(t->idnum)], head->getSem().toStdString().c_str());
+		match(ID);
+		t->idnum = (t->idnum) + 1;
+	}
+	else {
+		syntaxError("a varid is expected here! in line:" + QString::number(lineno));
 		head = head->next;
-    }
-    varIdMore(t);
+	}
+	varIdMore(t);
 }
 
 
@@ -643,18 +648,18 @@ void Parse::varIdList(TreeNode *t) {
 //变量声明部分变量名部分处理程序
 //参数为t，无返回值。该函数根据文法产生式，由读入的单词判断执行哪个分支(判断是否还有其他变量)。
 void Parse::varIdMore(TreeNode *t) {
-    switch (head->getLex()) {
-        case SEMI:
-            break;
-        case COMMA:
-            match(COMMA);
-            varIdList(t);
-            break;
-        default:
-            syntaxError("unexpected token "+head->getLexName()+ "in varIdMore()! in line:"+QString::number(lineno));
-			head = head->next;
-            break;
-    }
+	switch (head->getLex()) {
+	case SEMI:
+		break;
+	case COMMA:
+		match(COMMA);
+		varIdList(t);
+		break;
+	default:
+		syntaxError("unexpected token " + head->getLexName() + "in varIdMore()! in line:" + QString::number(lineno));
+		head = head->next;
+		break;
+	}
 }
 
 /********************************************************************/
@@ -702,14 +707,15 @@ TreeNode *Parse::procDeclaration() {
 			match(ID);
 		}
 		match(LPAREN);
+		//过程声明中的参数声明部分
 		paramList(t);
 		match(RPAREN);
 		//此处课本有误，应当match(SEMI)而非match(COLON)
 		match(SEMI);
 		t->child[1] = procDecPart();
 		t->child[2] = procBody();
-		//下面的语句为存在多个过程时使用
-		//t->sibling = procDec();
+		//下面的语句为存在多个procedure时使用，将其他procedure作为兄弟节点
+		t->sibling = procDec();
 	}
 	return t;
 }
@@ -769,7 +775,7 @@ TreeNode *Parse::paramMore() {
 	switch (head->getLex()) {
 	case RPAREN:
 		break;
-	//若过程声明中的参数声明中的参数后面为分号，说明存在多个参数
+		//若过程声明中的参数声明中的参数后面为分号，说明存在多个参数
 	case SEMI:
 		match(SEMI);
 		t = paramDecList();
@@ -795,7 +801,7 @@ TreeNode *Parse::mparam() {
 	if (t != nullptr) {
 		t->lineno = line0;
 		switch (head->getLex()) {
-		//当过程声明中的参数声明中参数部分为以下类型时，说明参数是值参
+			//当过程声明中的参数声明中参数部分为以下类型时，说明参数是值参
 		case INTEGER_T:
 		case CHAR_T:
 		case ARRAY:
@@ -806,7 +812,7 @@ TreeNode *Parse::mparam() {
 			formList(t);
 			break;
 
-		//当过程声明中的参数声明中参数部分为以下类型时，说明参数是变参
+			//当过程声明中的参数声明中参数部分为以下类型时，说明参数是变参
 		case VAR:
 			match(VAR);
 			t->attr.ProcAttr.paramt = varparamType;
@@ -891,14 +897,14 @@ TreeNode *Parse::procBody() {
 //该函数根据文法产生式，创建新的语句标志类型语法树节点，并匹配保留字，调用语句序列函数stmList()。
 //如果成功处理，则返回t；否则返回NULL.
 TreeNode *Parse::programBody() {
-    TreeNode *t = newStmlNode();
-    match(BEGIN);
-    if (t != nullptr) {
-        t->lineno = 0;
-        t->child[0] = stmList();
-    }
-    match(END);
-    return t;
+	TreeNode *t = newStmlNode();
+	match(BEGIN);
+	if (t != nullptr) {
+		t->lineno = 0;
+		t->child[0] = stmList();
+	}
+	match(END);
+	return t;
 }
 
 
@@ -910,12 +916,12 @@ TreeNode *Parse::programBody() {
 //调用更多语句处理函数stmMore()，返回指针p,并使p成为t的兄弟节点。
 //如果处理成功，则返回指针t，否则返回NULL.
 TreeNode *Parse::stmList() {
-    TreeNode *t = stm();
-    TreeNode *p = stmMore();
-    if (t != nullptr)
-        if (p != nullptr)
-            t->sibling = p;
-    return t;
+	TreeNode *t = stm();
+	TreeNode *p = stmMore();
+	if (t != nullptr)
+		if (p != nullptr)
+			t->sibling = p;
+	return t;
 }
 
 /********************************************************************/
@@ -925,23 +931,23 @@ TreeNode *Parse::stmList() {
 //该函数根据文法产生式，由读入单词判断执行哪个分支结构，即是否有更多的语句。
 //如果处理成功，则返回t；否则返回NULL.
 TreeNode *Parse::stmMore() {
-    TreeNode *t = nullptr;
-    switch (head->getLex()) {
-        case ELSE:
-        case FI:
-        case END:
-        case ENDWH:
-            break;
-        case SEMI:
-            match(SEMI);
-            t = stmList();
-            break;
-        default:
-            syntaxError("unexpected token "+head->getLexName()+" in stmMore()! in line:"+QString::number(lineno));
-			head = head->next;
-            break;
-    }
-    return t;
+	TreeNode *t = nullptr;
+	switch (head->getLex()) {
+	case ELSE:
+	case FI:
+	case END:
+	case ENDWH:
+		break;
+	case SEMI:
+		match(SEMI);
+		t = stmList();
+		break;
+	default:
+		syntaxError("unexpected token " + head->getLexName() + " in stmMore()! in line:" + QString::number(lineno));
+		head = head->next;
+		break;
+	}
+	return t;
 }
 
 /********************************************************************/
@@ -958,36 +964,36 @@ TreeNode *Parse::stmMore() {
 //如果处理成功，函数返回生成的语句类型语法树节点t；否则返回NULL.
 TreeNode *Parse::stm() {
 
-    TreeNode *t = nullptr;
-    switch (head->getLex()) {
-        case IF:
-            t = conditionalStm();
-            break;
-        case WHILE:
-            t = loopStm();
-            break;
-        case READ:
-            t = inputStm();
-            break;
-        case WRITE:
-            t = outputStm();
-            break;
-        case RETURN:
-            t = returnStm();
-            break;
-        case ID:
-            temp_name = head->getSem();
-            match(ID); //此处和课本有出入，应当match(ID)以获取下一个单词类型
-            t = assCall();
-            break;
+	TreeNode *t = nullptr;
+	switch (head->getLex()) {
+	case IF:
+		t = conditionalStm();
+		break;
+	case WHILE:
+		t = loopStm();
+		break;
+	case READ:
+		t = inputStm();
+		break;
+	case WRITE:
+		t = outputStm();
+		break;
+	case RETURN:
+		t = returnStm();
+		break;
+	case ID:
+		temp_name = head->getSem();
+		match(ID); //此处和课本有出入，应当match(ID)以获取下一个单词类型
+		t = assCall();
+		break;
 
 		//当前单词为其他单词，非期望单词语法错误，跳过当前单词，读入下一单词
-        default:
-            syntaxError("unexpected token:"+head->getLexName()+" in stm()! in  line:"+QString::number(lineno));
-			head = head->next;
-            break;
-    }
-    return t;
+	default:
+		syntaxError("unexpected token:" + head->getLexName() + " in stm()! in  line:" + QString::number(lineno));
+		head = head->next;
+		break;
+	}
+	return t;
 }
 
 /********************************************************************/
@@ -998,22 +1004,22 @@ TreeNode *Parse::stm() {
 //由于赋值语句和过程调用语句的开始部分都是标识符，所以该函数根据读入的单词选择调用相应的处理程序(赋值语句处理和过程调用语句处理程序)。
 //如果处理成功，函数返回生成的语句类型语法树节点t;否则返回NULL.
 TreeNode *Parse::assCall() {
-    TreeNode *t = nullptr;
-    switch (head->getLex()) {
-        case ASSIGN:
-        case LMIDPAREN:
-        case DOT:
-            t = assignmentRest();
-            break;
-        case LPAREN:
-            t = callStmRest();
-            break;
-        default:
-			syntaxError("unexpected token:" + head->getLexName() + " sem:" + head->getSem() + " in assCall()! in line:" + QString::number(lineno));
-            head = head->next;
-            break;
-    }
-    return t;
+	TreeNode *t = nullptr;
+	switch (head->getLex()) {
+	case ASSIGN:
+	case LMIDPAREN:
+	case DOT:
+		t = assignmentRest();
+		break;
+	case LPAREN:
+		t = callStmRest();
+		break;
+	default:
+		syntaxError("unexpected token:" + head->getLexName() + " sem:" + head->getSem() + " in assCall()! in line:" + QString::number(lineno));
+		head = head->next;
+		break;
+	}
+	return t;
 }
 
 /********************************************************************/
@@ -1022,29 +1028,29 @@ TreeNode *Parse::assCall() {
 //该函数根据文法产生式，创建新的赋值语句类型语法树节点。匹配保留字ASSIGN。创建新的表达式类型语法树节点。调用递归处理函数variMore及表达式函数mexp().
 //如果处理成功，函数返回生成的赋值语句类型语法树节点t，否则返回NULL.
 TreeNode *Parse::assignmentRest() {
-    TreeNode *t = newStmtNode(AssignK);
+	TreeNode *t = newStmtNode(AssignK);
 
-    /* 赋值语句节点的第一个儿子节点记录赋值语句的左侧变量名，*
-     * 第二个儿子结点记录赋值语句的右侧表达式*/
-    if (t != nullptr) {
-        t->lineno = line0;
+	/* 赋值语句节点的第一个儿子节点记录赋值语句的左侧变量名，*
+	 * 第二个儿子结点记录赋值语句的右侧表达式*/
+	if (t != nullptr) {
+		t->lineno = line0;
 
 
-        TreeNode *child1 = newExpNode(VariK);
-        if (child1 != nullptr) {
-            child1->lineno = line0;
-            strcpy(child1->name[0], temp_name.toStdString().c_str());
+		TreeNode *child1 = newExpNode(VariK);
+		if (child1 != nullptr) {
+			child1->lineno = line0;
+			strcpy(child1->name[0], temp_name.toStdString().c_str());
 			child1->idnum = child1->idnum + 1;
-            variMore(child1);//此句是否多余？
-            t->child[0] = child1;
-        }
+			variMore(child1);//此句是否多余？
+			t->child[0] = child1;
+		}
 
 
 		match(ASSIGN);
-        t->child[1] = mexp();
+		t->child[1] = mexp();
 
-    }
-    return t;
+	}
+	return t;
 }
 
 /********************************************************************/
@@ -1056,22 +1062,22 @@ TreeNode *Parse::assignmentRest() {
 //									   如果有两条或者多条语句，则要在语句序列开始前加上BEGIN，在结束后加上END。其中的最后一条语句末尾不用加分号)。
 //如果处理成功，函数返回生成的条件语句类型语法树节点t；否则返回NULL.
 TreeNode *Parse::conditionalStm() {
-    TreeNode *t = newStmtNode(IfK);
-    match(IF);
-    if (t != nullptr) {
-        t->lineno = line0;
-        t->child[0] = mexp();
-    }
-    match(THEN);
-    if (t != nullptr) 
+	TreeNode *t = newStmtNode(IfK);
+	match(IF);
+	if (t != nullptr) {
+		t->lineno = line0;
+		t->child[0] = mexp();
+	}
+	match(THEN);
+	if (t != nullptr)
 		t->child[1] = stmList();
-    if (head->getLex() == ELSE) {
-        match(ELSE);
-        if (t != nullptr)
-            t->child[2] = stmList();
-    }
-    match(FI);
-    return t;
+	if (head->getLex() == ELSE) {
+		match(ELSE);
+		if (t != nullptr)
+			t->child[2] = stmList();
+	}
+	match(FI);
+	return t;
 }
 
 
@@ -1082,16 +1088,16 @@ TreeNode *Parse::conditionalStm() {
 //该函数根据文法的产生式，匹配保留字WHILE，调用表达式处理函数mexp(),再匹配保留字DO，调用语句序列处理函数(不同于条件语句中的语句序列函数部分)，最后匹配保留字ENDWH。
 //如果处理成功，函数返回新生成的循环语句类型的语法树节点t，否则返回NULL.
 TreeNode *Parse::loopStm() {
-    TreeNode *t = newStmtNode(WhileK);
-    match(WHILE);
-    if (t != nullptr) {
-        t->lineno = line0;
-        t->child[0] = mexp();
-        match(DO);
-        t->child[1] = stmList();
-        match(ENDWH);
-    }
-    return t;
+	TreeNode *t = newStmtNode(WhileK);
+	match(WHILE);
+	if (t != nullptr) {
+		t->lineno = line0;
+		t->child[0] = mexp();
+		match(DO);
+		t->child[1] = stmList();
+		match(ENDWH);
+	}
+	return t;
 }
 
 /********************************************************************/
@@ -1101,17 +1107,20 @@ TreeNode *Parse::loopStm() {
 //该函数根据文法产生式，创建新的输入语句类型语法树节点t，匹配保留字READ，LPAREN，记录标识符名称，匹配ID,RPAREN.
 //如果处理成功，函数返回新建的语法树节点指针t；否则返回NULL.
 TreeNode *Parse::inputStm() {
-    TreeNode *t = newStmtNode(ReadK);
-    match(READ);
-    match(LPAREN);
-    if ((t != nullptr) && (head->getLex() == ID)) {
-        t->lineno = line0;
-        strcpy(t->name[0], head->getSem().toStdString().c_str());
-        (t->idnum)++;
-    }
-    match(ID);
-    match(RPAREN);
-    return t;
+	TreeNode *t = newStmtNode(ReadK);
+	match(READ);
+	match(LPAREN);
+	if ((t != nullptr) && (head->getLex() == ID)) {
+		//原代码有误，需要进行修正，当read时应当将read的单词作为read的子节点
+		/*t->lineno = line0;
+		strcpy(t->name[0], head->getSem().toStdString().c_str());
+		(t->idnum)++;*/
+		t->lineno = line0;
+		t->child[0] = mexp();
+	}
+	//match(ID);
+	match(RPAREN);
+	return t;
 }
 
 /********************************************************************/
@@ -1121,15 +1130,15 @@ TreeNode *Parse::inputStm() {
 //该函数根据文法产生式，创建新的输出语句类型语法树节点t，匹配保留字WRITE,LPAREN,调用函数mexp()，匹配保留字RPAREN.
 //如果处理成功，函数返回新创建的输出类型节点t，否则NULL。
 TreeNode *Parse::outputStm() {
-    TreeNode *t = newStmtNode(WriteK);
-    match(WRITE);
-    match(LPAREN);
-    if (t != nullptr) {
-        t->lineno = line0;
-        t->child[0] = mexp();
-    }
-    match(RPAREN);
-    return t;
+	TreeNode *t = newStmtNode(WriteK);
+	match(WRITE);
+	match(LPAREN);
+	if (t != nullptr) {
+		t->lineno = line0;
+		t->child[0] = mexp();
+	}
+	match(RPAREN);
+	return t;
 }
 
 /********************************************************************/
@@ -1189,8 +1198,8 @@ TreeNode *Parse::actParamList() {
  * 功  能 函数调用实参部分的处理函数
  * 产生式 < actParamMore > ::=     ε |  , actParamList
  */
-//更多实参部分处理分析程序
- //该函数根据读入的单词选择执行哪段分支程序。如果处理成功，则返回t；否则返回NULL.
+ //更多实参部分处理分析程序
+  //该函数根据读入的单词选择执行哪段分支程序。如果处理成功，则返回t；否则返回NULL.
 TreeNode *Parse::actParamMore() {
 	TreeNode *t = nullptr;
 	switch (head->getLex()) {
@@ -1384,30 +1393,30 @@ TreeNode *Parse::factor() {
 //该函数根据文法产生式，创建新的过程返回类型的语法树节点t,匹配保留字RETURN。
 //如果处理成功，函数返回新的过程返回类型的节点t；否则返回NULL.
 TreeNode *Parse::returnStm() {
-    TreeNode *t = newStmtNode(ReturnK);
-    match(RETURN);
-    if (t != nullptr)
-        t->lineno = line0;
-    return t;
+	TreeNode *t = newStmtNode(ReturnK);
+	match(RETURN);
+	if (t != nullptr)
+		t->lineno = line0;
+	return t;
 }
 
 
 
 
-/********************************************************************/		
+/********************************************************************/
 /* 产生式 variable   ::=   id variMore                   			*/
 /********************************************************************/
 //变量处理程序
 //该函数根据产生式，生成一个新的表达式节点t
 //如果创建成功且当前单词为ID，则记录并匹配ID，调用变量其余部分处理函数variMore(t)，返回t.
 TreeNode *Parse::variable() {
-    TreeNode *t = newExpNode(VariK);
+	TreeNode *t = newExpNode(VariK);
 
-   /* if ((t != nullptr) && (head->getLex() == ID)) {
-        t->lineno = line0;
-        strcpy(t->name[0], head->getSem().toStdString().c_str());
-        (t->idnum)++;
-    }*/
+	/* if ((t != nullptr) && (head->getLex() == ID)) {
+		 t->lineno = line0;
+		 strcpy(t->name[0], head->getSem().toStdString().c_str());
+		 (t->idnum)++;
+	 }*/
 	if ((t != nullptr) && (head->getLex() == ID)) {
 		t->lineno = line0;
 		strcpy(t->name[0], head->getSem().toStdString().c_str());
@@ -1416,9 +1425,9 @@ TreeNode *Parse::variable() {
 		variMore(t);
 	}
 
-    //match(ID);
-    //variMore(t);
-    return t;
+	//match(ID);
+	//variMore(t);
+	return t;
 }
 
 
@@ -1434,51 +1443,51 @@ TreeNode *Parse::variable() {
 //如果当前单词为DOT，则匹配DOT处理域变量函数fieldvar()；
 //否则，读入下一个TOKEN
 void Parse::variMore(TreeNode *t) {
-    switch (head->getLex()) {
-        case ASSIGN:
-        case TIMES:
-        case EQ:
-        case LT:
-        case PLUS:
-        case MINUS:
-        case DIVIDE:
-        case RPAREN:
-        case RMIDPAREN:
-        case SEMI:
-        case COMMA:
-        case THEN:
-        case ELSE:
-        case FI:
-        case DO:
-        case ENDWH:
-        case END:
-            break;
-        case LMIDPAREN:
-            match(LMIDPAREN);
+	switch (head->getLex()) {
+	case ASSIGN:
+	case TIMES:
+	case EQ:
+	case LT:
+	case PLUS:
+	case MINUS:
+	case DIVIDE:
+	case RPAREN:
+	case RMIDPAREN:
+	case SEMI:
+	case COMMA:
+	case THEN:
+	case ELSE:
+	case FI:
+	case DO:
+	case ENDWH:
+	case END:
+		break;
+	case LMIDPAREN:
+		match(LMIDPAREN);
 
 
-            t->child[0] = mexp();
+		t->child[0] = mexp();
 
-            t->attr.ExpAttr.varkind = ArrayMembV;
+		t->attr.ExpAttr.varkind = ArrayMembV;
 
 
-            t->child[0]->attr.ExpAttr.varkind = IdV;
-            match(RMIDPAREN);
-            break;
-        case DOT:
-            match(DOT);
+		t->child[0]->attr.ExpAttr.varkind = IdV;
+		match(RMIDPAREN);
+		break;
+	case DOT:
+		match(DOT);
 
-            t->child[0] = fieldvar();
+		t->child[0] = fieldvar();
 
-            t->attr.ExpAttr.varkind = FieldMembV;
+		t->attr.ExpAttr.varkind = FieldMembV;
 
-            t->child[0]->attr.ExpAttr.varkind = IdV;
-            break;
-        default:
-            syntaxError("unexpected token "+head->getLexName()+" in variMore()! in line:"+QString::number(lineno));
-			head = head->next;
-            break;
-    }
+		t->child[0]->attr.ExpAttr.varkind = IdV;
+		break;
+	default:
+		syntaxError("unexpected token " + head->getLexName() + " in variMore()! in line:" + QString::number(lineno));
+		head = head->next;
+		break;
+	}
 }
 
 /********************************************************************/
@@ -1488,18 +1497,18 @@ void Parse::variMore(TreeNode *t) {
 //该函数根据文法产生式，生成一个新的表达式节点t，如果创建成功且当前单词为ID，则记录并匹配ID，调用域变量其余部分处理函数fieldvarMore(t)，返回t.
 TreeNode *Parse::fieldvar() {
 
-    TreeNode *t = newExpNode(VariK);
+	TreeNode *t = newExpNode(VariK);
 
-    if ((t != nullptr) && (head->getLex() == ID)) {
-        t->lineno = line0;
-        strcpy(t->name[0], head->getSem().toStdString().c_str());
-        (t->idnum)++;
+	if ((t != nullptr) && (head->getLex() == ID)) {
+		t->lineno = line0;
+		strcpy(t->name[0], head->getSem().toStdString().c_str());
+		(t->idnum)++;
 		match(ID);
 
 		fieldvarMore(t);
-    }
+	}
 
-    return t;
+	return t;
 }
 
 /********************************************************************/
@@ -1511,35 +1520,35 @@ TreeNode *Parse::fieldvar() {
 //如果当前单词为ASSIGN等，则不做任何处理；
 //如果当前单词为LMIDPAREN，则调用mexp()处理表达式；否则，读入下一个TOKEN.
 void Parse::fieldvarMore(TreeNode *t) {
-    switch (head->getLex()) {
-        case ASSIGN:
-        case TIMES:
-        case EQ:
-        case LT:
-        case PLUS:
-        case MINUS:
-        case DIVIDE:
-        case RPAREN:
-        case SEMI:
-        case COMMA:
-        case THEN:
-        case ELSE:
-        case FI:
-        case DO:
-        case ENDWH:
-        case END:
-            break;
-        case LMIDPAREN:
-            match(LMIDPAREN);
+	switch (head->getLex()) {
+	case ASSIGN:
+	case TIMES:
+	case EQ:
+	case LT:
+	case PLUS:
+	case MINUS:
+	case DIVIDE:
+	case RPAREN:
+	case SEMI:
+	case COMMA:
+	case THEN:
+	case ELSE:
+	case FI:
+	case DO:
+	case ENDWH:
+	case END:
+		break;
+	case LMIDPAREN:
+		match(LMIDPAREN);
 
-            /*用来以后求出其表达式的值，送入用于数组下标计算*/
-            t->child[0] = mexp();
-            t->child[0]->attr.ExpAttr.varkind = ArrayMembV;
-            match(RMIDPAREN);
-            break;
-        default:
-            syntaxError("unexpected token "+head->getLexName()+" in fieldvarMore()! in line:"+QString::number(lineno));
-			head = head->next;
-            break;
-    }
+		/*用来以后求出其表达式的值，送入用于数组下标计算*/
+		t->child[0] = mexp();
+		t->child[0]->attr.ExpAttr.varkind = ArrayMembV;
+		match(RMIDPAREN);
+		break;
+	default:
+		syntaxError("unexpected token " + head->getLexName() + " in fieldvarMore()! in line:" + QString::number(lineno));
+		head = head->next;
+		break;
+	}
 }

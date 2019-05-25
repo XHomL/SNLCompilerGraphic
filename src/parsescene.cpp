@@ -92,8 +92,7 @@ void ParseScene::show_parsetree(QSharedPointer<TreeNode> root, QString text)
             item->cengshu=0;
             this->addItem(item);
 			//设置节点坐标
-            item->setPos(QPoint(-100+i*150+(qrand()%100),100+(qrand()%100)));
-
+            item->setPos(QPoint(-100+i*300+(qrand()%100),100+(qrand()%100)));
             line=new QGraphicsLineItem(QLine(item->myparent->scenePos().toPoint(),item->scenePos().toPoint()));
             this->addItem(line);
             line->setPos(item->myparent->scenePos());
@@ -113,7 +112,7 @@ void ParseScene::show_parsetree(QSharedPointer<TreeNode> root, QString text)
 
         item=new ParseItem(getName(node->sibling),parent);
         this->addItem(item);
-        item->setPos(QPoint(500+(qrand()%500),0)/2);
+        item->setPos(QPoint(200+(qrand()%500),0)/1);
 
                // auto coll=this->collidingItems(item,Qt::IntersectsItemBoundingRect);
                // while(!coll.empty()){
@@ -136,7 +135,7 @@ void ParseScene::show_parsetree(QSharedPointer<TreeNode> root, QString text)
 				//子节点的层数为parent节点层数+1
                 item->cengshu=parent->cengshu+1;
                 this->addItem(item);
-                item->setPos(QPoint(-300+(qrand()%400)+i*500,180+(qrand()%400))/1.5);
+                item->setPos(QPoint(-300+(qrand()%400)+i*300,80+(qrand()%400))/1);
 
                // while(!item->collidingItems(Qt::IntersectsItemBoundingRect).isEmpty()){
                //     item->moveBy(0,qrand()%50);
@@ -189,7 +188,7 @@ QString ParseScene::getName(const TreeNode *node)
     {
         switch (node->kind.dec) {
         case ArrayK:
-            return "DecK Array:"+QString(node->name[0])+" of "+deckind_map[node->attr.ArrayAttr.childtype]+" f "+QString::number(node->attr.ArrayAttr.low)+" t "+QString::number(node->attr.ArrayAttr.up);
+            return "DecK Array:"+QString(node->name[0])+" of "+deckind_map[node->attr.ArrayAttr.childtype]+" from "+QString::number(node->attr.ArrayAttr.low)+" to "+QString::number(node->attr.ArrayAttr.up);
         case CharK:
             return "DecK Char";
         case IntegerK:{

@@ -43,7 +43,7 @@ public:
         static auto *lex=new Lex();
         lex->doc=doc;
 		//设置速度，其值越小程序读取速度越快
-        lex->set_speed(1);
+        lex->set_speed(3);
         return lex;
 
     }

@@ -27,8 +27,6 @@ QMap<LexType, QString> lexName = { {PROGRAM, "PROGRAM"},
 								  {RETURN, "RETURN"},
 								  {INTEGER_T, "INTEGER"},
 								  {CHAR_T, "CHAR"},
-								  {INTEGER_T, "INTEGER_T"},
-								  {CHAR_T, "CHAR_T"},
 								  {ID, "ID"},
 								  {INTC_VAL, "INTC_VAL"},
 								  {CHARC_VAL, "CHAR_VAL"},
@@ -213,7 +211,7 @@ void Lex::run()
 			current = tmp;
 		}
 
-		//检测单词是否为下面列举的字符
+		//检测字符是否为下面列举的字符
 		else {
 			switch (lookhead) {
 
@@ -238,24 +236,25 @@ void Lex::run()
 
 				//若跟在':'后面的不是'='，则在控制台中输出错误信息
 				if (next != '=') {
-					qDebug() << "ERROR,:=";
+					qDebug() << "ERROR,:= in line:" << line_number;
 					ins.seek(ins.pos() - 1);
 					emit go_path({ {16,17},{17,19},{19,41} });
 				}
 
 				//若为':='则识别为ASSIGN,并进行线程间通信以显示路径
-				else {
+				else{
 					emit go_path({ {16,18},{18,20},{20,41} });
 					Token *tmp = new Token(line_number, ASSIGN, ":=");
 					emit token_get(tmp);
 					current->next = tmp;
 					current = tmp;
 				}
+
 				idBuff.clear();
 				break;
 			}
 
-			//当遇到'{'时进行如下处理
+					  //当遇到'{'时进行如下处理
 			case '{': {
 				emit go_path({ {0,21},{21,22} });
 				idBuff.append(lookhead);
@@ -273,7 +272,7 @@ void Lex::run()
 				break;
 			}
 
-			//当遇到'.'，判断是为'..'(数组下限标志）还是'.'（程序结束标志）
+					  //当遇到'.'，判断是为'..'(数组下限标志）还是'.'（程序结束标志）
 			case '.': {
 				emit go_path({ {0,24},{24,25} });
 				idBuff.append(lookhead);
@@ -290,7 +289,9 @@ void Lex::run()
 				else {
 					emit go_path({ {25,26},{26,28},{28,41} });
 					tmp = new Token(line_number, DOT, ".");
-					ins.seek(ins.pos() - 1);
+					//下面应当增加一个判断，'.'跟在end后,则将'.'作为代码结束符；否则作为成员符号，例如a.x
+					if(current->getLex()!= END)
+						ins.seek(ins.pos() - 1);
 				}
 				idBuff.clear();
 				emit token_get(tmp);
@@ -299,7 +300,7 @@ void Lex::run()
 				break;
 			}
 
-			//若单词为转义字符则进行下面的处理
+			//若单词为单引号，则将下一个读入的字符作为char
 			case '\'': {
 				emit go_path({ {0,30},{30,31} });
 				idBuff.append(lookhead);
@@ -317,7 +318,7 @@ void Lex::run()
 					idBuff.append(lookhead);
 					if (next == '\'') {
 						emit go_path({ {33,35},{35,36},{36,41} });
-						Token *tmp = new Token(line_number, CHARC_VAL, idBuff);
+						Token *tmp = new Token(line_number, CHAR_T, idBuff);
 						current->next = tmp;
 						current = tmp;
 						emit token_get(tmp);
