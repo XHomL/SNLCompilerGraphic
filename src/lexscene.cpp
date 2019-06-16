@@ -20,7 +20,7 @@ LexScene::LexScene() {
             {50,200},
     };
 
-
+	//给线段两端标上序号
     line={
             {0,1}, {1,2}, {2,3}, {3,4}, {1,4}, {4,5},
             {0,6},{6,7},{7,8},{8,9},{9,10},{7,10},{10,11},{5,11},
@@ -128,6 +128,7 @@ void LexScene::show_path(QVector<QPair<int, int> > v)
 	//清除之前path的蓝线
     path_item.clear();
     QPen pen;
+	//设置“标明线”的颜色与宽度
     pen.setColor(Qt::blue);
     pen.setWidth(3);
     for(auto item:v){

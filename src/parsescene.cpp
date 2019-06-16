@@ -92,7 +92,7 @@ void ParseScene::show_parsetree(QSharedPointer<TreeNode> root, QString text)
             item->cengshu=0;
             this->addItem(item);
 			//设置节点坐标
-            item->setPos(QPoint(-100+i*300+(qrand()%100),100+(qrand()%100)));
+            item->setPos(QPoint(-100+i*200+(qrand()%100),100+(qrand()%100)));
             line=new QGraphicsLineItem(QLine(item->myparent->scenePos().toPoint(),item->scenePos().toPoint()));
             this->addItem(line);
             line->setPos(item->myparent->scenePos());
@@ -135,7 +135,7 @@ void ParseScene::show_parsetree(QSharedPointer<TreeNode> root, QString text)
 				//子节点的层数为parent节点层数+1
                 item->cengshu=parent->cengshu+1;
                 this->addItem(item);
-                item->setPos(QPoint(-300+(qrand()%400)+i*300,80+(qrand()%400))/1);
+                item->setPos(QPoint(-300+(qrand()%400)+i*200,50+(qrand()%400))/1);
 
                // while(!item->collidingItems(Qt::IntersectsItemBoundingRect).isEmpty()){
                //     item->moveBy(0,qrand()%50);

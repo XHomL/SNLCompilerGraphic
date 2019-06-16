@@ -79,24 +79,26 @@ bool Parse::match(LexType expected) {
 TreeNode *Parse::programHead() {
 	TreeNode *t = newPheadNode();
 	//若当前程序不是以program开头，则返回NULL
-	if (!match(PROGRAM))
-		goto e;
+	if (!match(PROGRAM)) {
+		delete t;
+		t = nullptr;
+		return t;
+	}
 	//新语法树节点t创建成功，且当前单词为ID，则将当前单词的语义信息赋给新语法树节点t的成员attr.name[0]，作为程序的名字。
 	if ((nullptr != t) && (head->getLex() == ID)) {
 		t->lineno = head->getLine();
 		strcpy(t->name[0], head->getSem().toStdString().c_str());
 		//将当前单词和ID匹配，若失败则返回NULL
-		if (!match(ID))
-			goto e;
+		if (!match(ID)) {
+			delete t;
+			t = nullptr;
+			return t;
+		}
 	}
 	//若当前单词(程序名)为空或为保留字(非ID)则报错
 	else {
 		syntaxError("need a program name in line:" + lineno);
 	}
-	return t;
-e:
-	delete t;
-	t = nullptr;
 	return t;
 }
 
@@ -218,22 +220,23 @@ TreeNode *Parse::typeDecList() {
 	if (nullptr != t) {
 		t->lineno = line0;
 		typeId(t);
-		if (!match(EQ))
-			goto e;
+		if (!match(EQ)) {
+			delete t;
+			t = nullptr;
+			return t;
+		}
 		typeName(t);
-		if (!match(SEMI))
-			goto e;
+		if (!match(SEMI)) {
+			delete t;
+			t = nullptr;
+			return t;
+		}
 		auto *more = typeDecMore();
 		if (nullptr != more) {
 			t->sibling = more;
 		}
 	}
 
-	return t;
-
-e:
-	delete t;
-	t = nullptr;
 	return t;
 }
 
@@ -1153,8 +1156,6 @@ TreeNode *Parse::callStmRest() {
 	/*函数调用时，其子节点指向实参*/
 	if (t != nullptr) {
 		t->lineno = line0;
-
-
 		TreeNode *child0 = newExpNode(VariK);
 		if (child0 != nullptr) {
 			child0->lineno = line0;

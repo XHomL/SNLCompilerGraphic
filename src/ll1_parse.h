@@ -9,48 +9,49 @@
 #include <QThread>
 
 
-/**
-  * feizhongjiefu
-  **/
 
 extern QSet<LexType> NTSet;
 extern QSet<LexType> TTSet;
 
-/**
- * @brief lexName zhongjiefu
- */
 extern int lineno;
-extern QMap<LexType, QString> lexName ;
-class LL1_parse:public QThread
+extern QMap<LexType, QString> lexName;
+class LL1_parse :public QThread
 {
-    Q_OBJECT
+	Q_OBJECT
 public:
 
-    static LL1_parse *getInstance(const Token *head){
-        auto instance= new LL1_parse(head);
-        return instance;
-    }
-    TreeNode *get_parsetree_head();
-    // QThread interface
+	static LL1_parse *getInstance(const Token *head) {
+		auto instance = new LL1_parse(head);
+		return instance;
+	}
+	TreeNode *get_parsetree_head();
+	// QThread interface
 protected:
-    void run() override;
+	void run() override;
 
 signals:
-    void parse_success(QSharedPointer<TreeNode> p,QString title);
+	void parse_success(QSharedPointer<TreeNode> p, QString title);
 
 
 private:
-    LL1_parse(const Token *root);
-    void createLL1Table();
-    void process(int id);
+	LL1_parse(const Token *root);
+	void createLL1Table();
+	void process(int id);
 private:
-    const Token *head;
-    QMap<QPair<LexType,LexType>,int> table;
-    QStack<LexType> symbal_stack;
-    QStack<TreeNode **> syntaxtree_stack;
-    QStack<TreeNode *> op_stack;
-    QStack<TreeNode *> num_stack;
-    TreeNode *root;
+	//指向Token的行号line
+	const Token *head;
+	//预测分析表
+	QMap<QPair<LexType, LexType>, int> table;
+	//符号栈 存的是Token的种别码
+	QStack<LexType> symbal_stack;
+	//语法分析树节点栈
+	QStack<TreeNode **> syntaxtree_stack;
+	//操作符栈
+	QStack<TreeNode *> op_stack;
+	//操作数栈
+	QStack<TreeNode *> num_stack;
+	//语法分析树的根节点
+	TreeNode *root;
 };
 
 #endif // LL1_PARSE_H

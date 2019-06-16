@@ -1,0 +1,3 @@
+﻿  parse.cpp
+c:\users\homl\desktop\byyl\snlcompilergraphic\src\parse.cpp(70): warning C4715: “Parse::match”: 不是所有的控件路径都返回值
+  SNLCompilerGraphic.vcxproj -> C:\Users\HomL\Desktop\byyl\SNLCompilerGraphic\debug\SNLCompilerGraphic.exe
